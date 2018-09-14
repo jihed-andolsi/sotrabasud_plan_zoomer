@@ -1,0 +1,108 @@
+<html>
+    <head>
+        <meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0"/>
+        <title>SOTRABASUD</title>
+        <link rel=stylesheet href=https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css>
+        <link rel=stylesheet href=https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css integrity=sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm crossorigin=anonymous>
+        <link href=https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css rel=stylesheet>
+        <link href=https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.theme.min.css rel=stylesheet>
+    </head>
+    <body>
+        <div id=container_map></div>
+        <script src=https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js></script>
+        <script src=https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js integrity=sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q crossorigin=anonymous></script>
+        <script src=https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js integrity=sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl crossorigin=anonymous></script>
+        <script src=https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js></script>
+        <script>
+            $(document).ready(function(){
+                new Map.Zoomer(window.innerWidth, window.innerHeight, {transparent: true, autoResize: true}).init({
+                    selectorId: "container_map",
+                    size: [1366, 768],
+                    sizePhone: [window.innerWidth, window.innerHeight],
+                    fullSizeShow: true,
+                    sprites: [
+                        {"name": "background", "url": "./assets/pictures/4.jpg", "x": 0, "y": 0},
+                    ],
+                    properties: {
+                        "floors": [
+                            {"title": "Etage 6", "coords": [[-2073.715298626949,-904.3169203979805,true],[-276.34022551394145,-1444.8808521612912,true],[835.1943591743658,-1232.033804029488,true],[828.4373100273243,-870.531674662774,true],[-245.93350435225526,-995.5370838830396,true],[-2063.5797249063867,-546.1933156047877,true]], "opacity": .5},
+                            {"title": "Etage 5","coords": [[831.9999999999989,-130.99999999999906,true],[-144.00000000000088,-270.99999999999903,true],[-2064.0000000000005,17.000000000000906,true],[-2064.0000000000005,-382.99999999999903,true],[-276.00000000000085,-914.9999999999989,true],[835.9999999999989,-670.999999999999,true],[831.9999999999989,-134.99999999999906,false],[-276.00000000000085,-914.9999999999989,true],[-232.00000000000085,-286.99999999999903,true]], "opacity": .5},
+                        ],
+                    },
+                    widthExtent: function(width){
+                        return -4500;
+                    },
+                    heightExtent: function(height){
+                        return -3365;
+                    },
+                    widthExtentMaximum: function(width){
+                        /*if(width< 400){
+                            return 4500;
+                        }*/
+                        return 4500;
+                    },
+                    heightExtentMaximum: function(height){
+                        /*if(height< 700){
+                            return 3365;
+                        }*/
+                        return 3365;
+                    },
+                    initialData: function(width, height){
+                        if(window.innerWidth<1400){
+                            var k = .7;
+                            var x = -250;
+                            var y = 0;
+                        } else {
+                            var k = 0.17;
+                            var x = 960;
+                            var y = 528;
+                        }
+
+                        return {"k":k, "x":x, "y":y};
+                    },
+                    initialDataMobile:  function(width, height){
+                        var k = .7;
+                        var x = 0;
+                        var y = 0;
+                        return {"k":k, "x":x, "y":y};
+                    },
+                    showGuide: true,
+                    defaultColor: 0x2C6BA4,
+                    defaultOpacity: .9,
+                    showButtonPlans: false,
+                    onMouseOverBackground: function(elemnt){
+                        // console.log('onMouseOverBackground');
+                        $('.ui-tooltip').hide();
+                    },
+                    onMouseOutBackground: function(element){
+                        console.log('onMouseOutBackground');
+                    },
+                    onFinishDrawing(item){
+                        console.log(JSON.stringify(item));
+                    },
+                    onMouseOverPropertie(item){
+                        $("canvas[title]").tooltip("option", "content", item.title);
+                        $('.ui-tooltip').show();
+                    },
+                    onClickPropertie(item){
+
+                    }
+                }, function(){
+                    // console.log("loaded");
+                    $("#container_map canvas").addClass('row');
+                    $("#container_map canvas").attr('id', 'canvas-container');
+                    $("#container_map canvas").css('margin', '0');
+                    $("#container_map canvas").attr('title', ' ');
+                    $("#container_map canvas").tooltip({
+                        track: true,
+                        context: function () {
+                            return ' ';
+                        },
+                    });
+                    $('.ui-tooltip').hide();
+                });
+            })
+
+        </script>
+    <script type="text/javascript" src="bundle.min.js"></script></body>
+</html>
