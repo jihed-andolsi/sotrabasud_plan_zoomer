@@ -7,7 +7,7 @@ let tweenManager = require("pixi-tween");
 import * as d3 from "d3";
 import Button from "./Tools/Button";
 import LoaderText from "./Tools/LoaderText";
-import {isMobile} from "./Tools/DeviceDetect";
+import { isMobile } from "./Tools/DeviceDetect";
 
 
 class Zoomer extends PIXI.Application {
@@ -27,7 +27,7 @@ class Zoomer extends PIXI.Application {
     private newGraphic = [];
     private _counterGraphic: number = 0;
     private newGraphicObj = [];
-    private zoomTrans = {x: 0, y: 0, k: .1};
+    private zoomTrans = { x: 0, y: 0, k: .1 };
     private startDrawing: boolean = false;
     private lineTo: boolean = true;
     private backgroundClicked: boolean = false;
@@ -94,7 +94,11 @@ class Zoomer extends PIXI.Application {
     private setup(callback) {
         const $this = this;
         const s = {};
-        const text = new LoaderText(window.innerWidth, window.innerHeight);
+        let [width, height] = (this.options as any).size;
+        if (isMobile() || (this.options as any).fullSizeShow) {
+            [width, height] = [window.innerWidth, window.innerHeight];
+        }
+        const text = new LoaderText(width, height);
 
         $this.stage.addChild(text);
 
@@ -119,7 +123,12 @@ class Zoomer extends PIXI.Application {
             $this.stage.removeChild(text);
             $this.addBackground();
             $this.addGuide();
-            $this.addGraphics(($this.options as any).properties.floors);
+            if ("floors" in ($this.options as any).properties) {
+                $this.addGraphics(($this.options as any).properties.floors);
+            }
+            if ("floor" in ($this.options as any).properties) {
+                $this.addGraphics(($this.options as any).properties.floor);
+            }
             $this.addButtons();
             $this.addPowredBy();
             $this.initZoomAction();
@@ -237,7 +246,7 @@ class Zoomer extends PIXI.Application {
                     }*/
                 };
                 ($this as any).Container.addChild(Graph);
-                Graphics.push({G, Graph});
+                Graphics.push({ G, Graph });
             }
         });
         $this.Graphics = Graphics;
@@ -323,7 +332,7 @@ class Zoomer extends PIXI.Application {
         });*/
 
         $this.zoomHandler = d3.zoom()
-            .scaleExtent([.1, 8])
+            .scaleExtent((this.options as any).limitZoom)
             .translateExtent([[$this.widthExtent, $this.heightExtent], [$this.widthExtentMaximum, $this.heightExtentMaximum]])
             .on("start", () => {
                 return $this.startZoomActions($this);
@@ -342,7 +351,7 @@ class Zoomer extends PIXI.Application {
 
     private initZommActionFunctionalities() {
         const $this = this;
-        let data = {k: 1, x: 0, y: 0};
+        let data = { k: 1, x: 0, y: 0 };
         if ((this.options as any).hasOwnProperty("initialData")) {
             data = (this.options as any).initialData($this.width, $this.height);
         }
@@ -481,11 +490,35 @@ class Zoomer extends PIXI.Application {
     public removeGraphics() {
         const $this = this;
         $this.Graphics.map((e) => {
-            let {G, Graph} = e;
+            let { G, Graph } = e;
             $this.Container.removeChild(Graph);
         });
 
         $this.Graphics = [];
+    }
+
+    public addItems() {
+        const $this = this;
+        if ("floors" in ($this.options as any).properties) {
+            $this.addGraphics(($this.options as any).properties.floors);
+        }
+        if ("floor" in ($this.options as any).properties) {
+            $this.addGraphics(($this.options as any).properties.floor);
+        }
+    }
+
+    public removeItems() {
+        this.removeGraphics();
+    }
+
+    public addGraphicInfo(prp) {
+        const $this = this;
+        if ("floors" in ($this.options as any).properties) {
+            (this.options as any).properties.floors.push(prp)
+        }
+        if ("floor" in ($this.options as any).properties) {
+            (this.options as any).properties.floor.push(prp)
+        }
     }
 
     private createGraph(coords, graphInfo = {}) {
@@ -574,12 +607,15 @@ class Zoomer extends PIXI.Application {
     };
 
     public rendererResize($this) {
+        let wwidth = document.getElementById(`${$this.selector}`).clientWidth;
+        let wheight = $this.height;
         if (isMobile() || ($this.options as any).fullSizeShow) {
-            $this.width = window.innerWidth;
-            $this.height = window.innerHeight;
+            wwidth = window.innerWidth;
+            wheight = window.innerHeight;
         }
-        let ratio = Math.min(window.innerWidth / $this.width,
-            window.innerHeight / $this.height);
+
+        let ratio = Math.min(wwidth / $this.width,
+            wheight / $this.height);
         if (ratio > 1) {
             ratio = 1;
         }
@@ -587,20 +623,18 @@ class Zoomer extends PIXI.Application {
         $this.Container.scale.y = ratio;
         $this.ContainerButtons.scale.x = ratio;
         $this.ContainerButtons.scale.y = ratio;
-        //$this.ContainerGuide.scale.x = ratio;
-        //$this.ContainerGuide.scale.y = ratio;
-        // ($this.sprites as any).searchIcon.x = ($this as any).width - 150;
-        // ($this.sprites as any).searchIcon.y = 50;
-        // ($this.sprites as any).fulscreenIcon.x = ($this as any).width - 150;
-        // ($this.sprites as any).fulscreenIcon.y = ($this as any).height - 150;
         $this.addButtons();
-        $this.PowredByText.x = $this.width - 200;
-        $this.PowredByText.y = $this.height - 50;
+        $this.PowredByText.x = wwidth - 200;
+        $this.PowredByText.y = wheight - 50;
         // Update the renderer dimensions
-        let width = Math.ceil($this.width * ratio);
-        let height = Math.ceil($this.height * ratio);
-        $this.renderer.resize(width, height);
-        if(!$this.isMobile) {
+        if (!$this.isMobile) {
+            $this.renderer.resize(wwidth, wheight);
+        } else {
+            let width = Math.ceil(wwidth * ratio);
+            let height = Math.ceil(wheight * ratio);
+            $this.renderer.resize(width, height);
+        }
+        if (!$this.isMobile) {
             if ($this.options.hasOwnProperty('showGuide')) {
                 if (($this.options as any).showGuide) {
                     //($this.sprites as any).guide.x = width / 2;
@@ -610,7 +644,7 @@ class Zoomer extends PIXI.Application {
                     //$this.ContainerGuide.scale.x = ratio;
                     //$this.ContainerGuide.scale.y = ratio;
                     //if (($this.sprites).guide.width > width) {
-                        //($this.sprites).guide.width = width;
+                    //($this.sprites).guide.width = width;
                     //}
                 }
             }
@@ -635,6 +669,18 @@ class Zoomer extends PIXI.Application {
 
     private removeFiltersFromSprite(sprite) {
         this.filterBackground.reset();
+    }
+
+    public search(search, searchOptions) {
+        if("search" in (this.options as any)){
+            this._modeSearh = search;
+            (this.options as any).search(this.Graphics, search, searchOptions);
+            if (search) {
+                this.removeColorFromBackground();
+            } else {
+                this.addColorToBackground();
+            }
+        }
     }
     get modeSearh(): boolean {
         return this._modeSearh;
