@@ -201,9 +201,9 @@ class Zoomer extends PIXI.Application {
                 fill: ["#646565"],
             });
             let word = G.info.etage;
-            if(parseInt(word)){
+            if(parseInt(word)>=0){
                 word = parseInt(word);
-                if(word < 10){
+                if(word < 10 || word == 0){
                     word = `0${word}`;
                 } else {
                     word = `${word}`;
