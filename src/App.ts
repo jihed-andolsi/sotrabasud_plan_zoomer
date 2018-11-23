@@ -13,6 +13,7 @@ import { isMobile } from "./Tools/DeviceDetect";
 class Zoomer extends PIXI.Application {
     private Customloader = new PIXI.loaders.Loader();
     private Container = new PIXI.Container();
+    private ContainerFloors = new PIXI.Container(PIXI.Texture.WHITE);
     private ContainerButtons = new PIXI.Container();
     private ContainerGuide = new PIXI.Container();
 
@@ -66,6 +67,9 @@ class Zoomer extends PIXI.Application {
         (this.options as any).width = width;
         (this.options as any).height = height;
         this.Container.zIndex = 0;
+        this.ContainerFloors.zIndex = 1;
+        
+
         // this.Container.anchor = new PIXI.Point(0.5, 0.5);
 
         this.ContainerButtons.zIndex = 1;
@@ -91,7 +95,7 @@ class Zoomer extends PIXI.Application {
         document.getElementById($this.selector).appendChild($this.view);
     }
 
-    private setup(callback) {
+    private async setup(callback) {
         const $this = this;
         const s = {};
         let [width, height] = (this.options as any).size;
@@ -104,12 +108,12 @@ class Zoomer extends PIXI.Application {
 
         $this.stage.addChild($this.Container);
 
-        (this.options as any).sprites.forEach((e) => {
+        await (this.options as any).sprites.forEach((e) => {
             $this.Customloader.add(e.name, e.url);
         });
 
-        $this.Customloader.load((loader, resources) => {
-            Object.keys(resources).map((e) => {
+        $this.Customloader.load(async (loader, resources) => {
+            await Object.keys(resources).map((e) => {
                 this.sprites[e] = new PIXI.Sprite(resources[e].texture);
             });
         });
@@ -119,20 +123,23 @@ class Zoomer extends PIXI.Application {
         }); // called once per loaded/errored file
         // $this.Customloader.onError.add(() => { }); // called once per errored file
         // $this.Customloader.onLoad.add(() => { }); // called once per loaded file
-        $this.Customloader.onComplete.add((e) => {
+        await $this.Customloader.onComplete.add(async (e) => {
             $this.stage.removeChild(text);
             $this.addBackground();
             $this.addGuide();
             if ("floors" in ($this.options as any).properties) {
-                $this.addGraphics(($this.options as any).properties.floors);
+                await $this.addGraphics(($this.options as any).properties.floors);
             }
             if ("floor" in ($this.options as any).properties) {
-                $this.addGraphics(($this.options as any).properties.floor);
+                await $this.addGraphics(($this.options as any).properties.floor);
             }
             $this.addButtons();
             $this.addPowredBy();
-            $this.initZoomAction();
-            $this.resizeCanvas();
+            await $this.initZoomAction();
+            await $this.resizeCanvas();
+            if ("floors" in ($this.options as any).properties) {
+                await $this.addEtageCounter();
+            }
             callback();
         });
     }
@@ -174,10 +181,72 @@ class Zoomer extends PIXI.Application {
         };
         $this.Container.addChild(($this.sprites as any).background);
     }
-
+    public async addEtageCounter(){
+        const $this = this;
+        const {Graphics} = $this;
+        $this.stage.addChild($this.ContainerFloors);
+        let y = 30;
+        const yPhase = 50
+        const rectangle = new PIXI.Graphics();
+        rectangle.beginFill(0xFFFFFF);
+        rectangle.lineStyle(.5, 0x646565);
+        rectangle.drawRect(0, 10, 50, (Graphics.length* 50) + 20);
+        $this.ContainerFloors.addChild(rectangle);
+        await Graphics.forEach((e) => {
+            let { G, Graph } = e;
+            let style = new PIXI.TextStyle({
+                fontFamily: "Arial",
+                fontSize: 14,
+                fontWeight: "bold",
+                fill: ["#646565"],
+            });
+            let word = G.info.etage;
+            if(parseInt(word)){
+                word = parseInt(word);
+                if(word < 10){
+                    word = `0${word}`;
+                } else {
+                    word = `${word}`;
+                }
+            }
+            let txt = new PIXI.Text(word, "Arial");
+            txt.anchor = new PIXI.Point(0.5, 0.5);
+            txt.x = 20;
+            txt.y = y;
+            txt.style = style;
+            txt.interactive = true;
+            const rct = new PIXI.Graphics();
+            rct.beginFill(0x646565);
+            rct.lineStyle(1, 0x646565);
+            rct.drawRect(30, y, 10, 1);
+            rct.anchor = new PIXI.Point(0.5, 0.5);
+            rct.interactive = true;
+            rectangle.addChild(rct);
+            rectangle.addChild(txt);
+            rct.mouseover = txt.mouseover = () => {
+                if(!this._modeSearh){
+                    rct.width = rct.width + 1;
+                    rct.x= rct.x;
+                    rct.y= rct.y;
+                    Graph.alpha = 1;
+                }
+                
+            };
+            rct.mouseout = txt.mouseout = () => {
+                if(!this._modeSearh){
+                    rct.width= rct.width - 1;
+                    rct.x=rct.x;
+                    rct.y=rct.y;
+                    Graph.alpha = 0;
+                }
+            };
+            y += yPhase;
+        });
+        rectangle.x= this.width - 60;
+    }
     public addGraphics(properties) {
         const $this = this;
-        const Graphics = [];
+        let Graphics = [];
         $this.removeGraphics();
         console.dir(properties);
 
@@ -246,7 +315,7 @@ class Zoomer extends PIXI.Application {
                     }*/
                 };
                 ($this as any).Container.addChild(Graph);
-                Graphics.push({ G, Graph });
+                Graphics = [...Graphics, { G, Graph }];
             }
         });
         $this.Graphics = Graphics;
@@ -308,7 +377,7 @@ class Zoomer extends PIXI.Application {
         $this.ContainerButtons.addChild(this.PowredByText);
     }
 
-    private initZoomAction() {
+    private async initZoomAction() {
         const $this = this;
         $this.canvas = d3.select(`#${$this.selector} canvas`);
         $this.context = $this.canvas.node().getContext("2d");
@@ -346,10 +415,10 @@ class Zoomer extends PIXI.Application {
             .filter(() => {
                 return !$this.D3Interval;
             });
-        $this.initZommActionFunctionalities();
+        await $this.initZommActionFunctionalities();
     }
 
-    private initZommActionFunctionalities() {
+    private async initZommActionFunctionalities() {
         const $this = this;
         let data = { k: 1, x: 0, y: 0 };
         if ((this.options as any).hasOwnProperty("initialData")) {
@@ -359,7 +428,7 @@ class Zoomer extends PIXI.Application {
             data = (this.options as any).initialDataMobile($this.width, $this.height);
         }
         // initX = $this.width - $this.background.width
-        $this.canvas.call($this.zoomHandler).call($this.zoomHandler.transform, d3.zoomIdentity.translate(data.x, data.y).scale(data.k));
+        await $this.canvas.call($this.zoomHandler).call($this.zoomHandler.transform, d3.zoomIdentity.translate(data.x, data.y).scale(data.k));
         $this.canvas.on("click", () => {
             // const x = (d3.event.x - $this.zoomTrans.x) / $this.zoomTrans.k;
             // const y = (d3.event.y - $this.zoomTrans.y) / $this.zoomTrans.k;
@@ -372,7 +441,18 @@ class Zoomer extends PIXI.Application {
         const y = d3.event.transform.y;
         const k = d3.event.transform.k;
         $this.zoomTrans = d3.event.transform;
-        console.dir($this.zoomTrans);
+        let data = { k: 1, x: 0, y: 0 };
+        if (($this.options as any).hasOwnProperty("initialData")) {
+            data = ($this.options as any).initialData($this.width, $this.height);
+        }
+        if (isMobile()) {
+            data = ($this.options as any).initialDataMobile($this.width, $this.height);
+        }
+        if(k>data.k){
+            $this.ContainerFloors.alpha = 0;
+        } else {
+            $this.ContainerFloors.alpha = 1;
+        }
 
         // console.dir(d3.event.transform);
         // let translate = "translate(" + d3.event.translate + ")";
@@ -527,7 +607,7 @@ class Zoomer extends PIXI.Application {
             if (coords.length) {
                 let color = 0xc10000;
                 let opacity = .5;
-                let lineSize = 5;
+                let lineSize = 0;
                 if (($this.options as any).hasOwnProperty('defaultColor')) {
                     if (($this.options as any).defaultColor) {
                         color = ($this.options as any).defaultColor;
@@ -595,13 +675,13 @@ class Zoomer extends PIXI.Application {
         return (y - $this.zoomTrans.y) / $this.zoomTrans.k;
     }
 
-    public resizeCanvas() {
+    public async resizeCanvas() {
         const $this = this;
-        $this.rendererResize($this);
-        window.addEventListener('resize', () => {
+        await $this.rendererResize($this);
+        await window.addEventListener('resize', () => {
             return $this.rendererResize($this);
         });
-        window.addEventListener('deviceOrientation', () => {
+        await window.addEventListener('deviceOrientation', () => {
             return $this.rendererResize($this);
         });
     };
@@ -650,6 +730,8 @@ class Zoomer extends PIXI.Application {
             }
         }
         $this.canvas.call($this.zoomHandler).call($this.zoomHandler.transform, d3.zoomIdentity.translate($this.zoomTrans.x, $this.zoomTrans.y).scale($this.zoomTrans.k));
+        //$this.ContainerFloors.position.set(($this.renderer.width / 2) - this.ContainerFloors.width, 100)
+        return true;
 
     };
 
