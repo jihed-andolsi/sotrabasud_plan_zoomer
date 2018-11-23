@@ -137,7 +137,7 @@ class Zoomer extends PIXI.Application {
             $this.addPowredBy();
             await $this.initZoomAction();
             await $this.resizeCanvas();
-            if ("floors" in ($this.options as any).properties) {
+            if ("floors" in ($this.options as any).properties && !$this.isMobile) {
                 await $this.addEtageCounter();
             }
             callback();
